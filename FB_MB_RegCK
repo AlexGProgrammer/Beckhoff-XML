@@ -1,0 +1,66 @@
+//This code is performing a series of data management operations for three different groups of data: MTU, PTU and RTU. 
+//The code reads data from a Modbus communication interface, buffers it, and then determines whether new data has been written
+
+// Initialise the total value counter for the MTU,PTU and the RTU to Zero
+TotalValueonMTU :=0;
+TotalValueonPTU :=0;
+TotalValueonRTU :=0;
+// Reset the index variable "i" to zero if the condition "Scan" is true.
+IF Scan = TRUE THEN i := 0;
+END_IF
+
+// Loop through a set of "mb_Output_Registers" in the range of 500 to 556. 
+FOR i := 500 TO 556 BY 1 DO	//MTU Setpoints Store 
+	TotalValueonMTU := TotalValueonMTU + mb_Comms.mb_Output_Registers[i];			// Add the value of each register in the range to "TotalValueonMTU".
+	IF TotalValueonMTU > 0 THEN														// If "TotalValueonMTU" is greater than zero, continue with the following checks.
+		IF  mb_Comms.mb_Output_Registers[559] <> S1_BuffedData[59] THEN 			// If the 559th register (termed as Watchdog address) is not equal to the 59th buffered data, 
+			IF mb_Comms.mb_Output_Registers[559] <> 0 THEN							// And if the 559th register is not zero, to make sure comms has been established 
+				IF mb_Comms.mb_Output_Registers[i] <> S1_BuffedData[i-500] THEN 	//Check if Server has Written anything new since last scan 
+					S1_BuffedData[i-500] := mb_Comms.mb_Output_Registers[i];		//Move that to the Buffer store
+					WrittenStore[i-500] := mb_Comms.mb_Output_Registers[i];			//Move Buffer store infomation into the Output
+					SuccessfulMTU := TRUE;
+				END_IF
+			END_IF
+		END_IF
+	END_IF
+END_FOR
+
+// Loop through a set of "mb_Output_Registers" in the range of 600 to 656. 
+FOR i := 600 TO 656 BY 1 DO	//PTU Setpoints Store 
+	TotalValueonPTU := TotalValueonPTU + mb_Comms.mb_Output_Registers[i];			// Add the value of each register in the range to "TotalValueonPTU".
+	IF TotalValueonPTU > 0 THEN														// If "TotalValueonMTU" is greater than zero, continue with the following checks.
+		IF  mb_Comms.mb_Output_Registers[659] <> S2_BufferData[59] THEN				// If the 659th register (termed as Watchdog address) is not equal to the 59th buffered data,
+			IF mb_Comms.mb_Output_Registers[659] <> 0 THEN							// And if the 659th register is not zero, to make sure comms has been established 
+				IF mb_Comms.mb_Output_Registers[i] <> S2_BufferData[i-600] THEN 	//Check if Server has Written anything new since last scan 
+					S2_BufferData[i-600] := mb_Comms.mb_Output_Registers[i];		//Move that to the Buffer store
+					WrittenStore[i-600] := mb_Comms.mb_Output_Registers[i];			//Move Buffer store infomation into the Output
+					SuccessfulPTU := TRUE;
+				END_IF
+			END_IF	
+		END_IF
+	END_IF
+END_FOR
+
+// Loop through a set of "mb_Output_Registers" in the range of 700 to 756. 
+FOR i := 700 TO 756 BY 1 DO	//RTU Setpoints Store 
+	TotalValueonRTU := TotalValueonRTU + mb_Comms.mb_Output_Registers[i];			// Add the value of each register in the range to "TotalValueonPTU".
+	IF TotalValueonRTU > 0 THEN														// If "TotalValueonMTU" is greater than zero, continue with the following checks.
+		IF  mb_Comms.mb_Output_Registers[759] <> S3_BufferData[59] THEN				// If the 659th register (termed as Watchdog address) is not equal to the 59th buffered data,
+			IF mb_Comms.mb_Output_Registers[759] <> 0 THEN							// And if the 659th register is not zero, to make sure comms has been established 
+				IF mb_Comms.mb_Output_Registers[i] <> S3_BufferData[i-700] THEN 	//Check if Server has Written anything new since last scan 
+					S3_BufferData[i-700] := mb_Comms.mb_Output_Registers[i];		//Move that to the Buffer store
+					WrittenStore[i-700] := mb_Comms.mb_Output_Registers[i];			//Move Buffer store infomation into the Output
+					SuccessfulRTU := TRUE;
+				END_IF
+			END_IF	
+		END_IF
+	END_IF
+END_FOR
+
+IF SuccessfulMTU = TRUE OR SuccessfulPTU = TRUE OR SuccessfulRTU THEN			//New Data has been recieved move data into setpoint array
+	WriteValue := TRUE;
+END_IF
+
+S1_BuffedData[59] := mb_Comms.mb_Output_Registers[559];				//Move watchdog to the bufferdata store
+S2_BufferData[59] := mb_Comms.mb_Output_Registers[659];				//Move watchdog to the bufferdata store
+S3_BufferData[59] := mb_Comms.mb_Output_Registers[759];				//Move watchdog to the bufferdata store
